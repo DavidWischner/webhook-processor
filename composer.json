@@ -1,0 +1,41 @@
+{
+    "name": "spryker-community/webhook-processor",
+    "description": "Spryker WebhookProcessor module for routing webhook messages to queues via REST API",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "spryker/glue-application": "^1.0.0",
+        "spryker/glue-application-extension": "^1.0.0",
+        "spryker/kernel": "^3.0.0",
+        "spryker/queue": "^1.0.0",
+        "spryker/symfony": "^3.0.0",
+        "spryker/transfer": "^3.0.0",
+        "spryker/util-encoding": "^2.0.0"
+    },
+    "require-dev": {
+        "spryker/code-sniffer": "*",
+        "spryker/testify": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "SprykerCommunity\\": "src/SprykerCommunity/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SprykerCommunityTest\\": "tests/SprykerCommunityTest/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "scripts": {
+        "cs-check": "phpcs -p -s --standard=vendor/spryker/code-sniffer/Spryker/ruleset.xml src/",
+        "cs-fix": "phpcbf -p --standard=vendor/spryker/code-sniffer/Spryker/ruleset.xml src/"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.0.x-dev"
+        }
+    }
+}
