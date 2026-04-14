@@ -59,6 +59,11 @@ class WebhookProcessorRequestTransformerSubscriber implements EventSubscriberInt
             return;
         }
 
+        // Spryker Glue requires an Accept header — add it if missing (e.g. Akeneo does not send it).
+        if (!$request->headers->has('accept')) {
+            $request->headers->set('accept', 'application/vnd.api+json');
+        }
+
         // Check if it's CloudEvents format (has 'type' field at root level)
         // CloudEvents has: {"type": "...", "data": {...}, "id": "..."}
         // JSON-API has: {"data": {"type": "...", "attributes": {...}}}
@@ -69,6 +74,8 @@ class WebhookProcessorRequestTransformerSubscriber implements EventSubscriberInt
                     'attributes' => $data,
                 ],
             ];
+
+            $request->headers->set('content-type', 'application/vnd.api+json');
 
             // Symfony's Request::$content is protected with no public setter.
             // Reflection is the only way to replace the body after object creation.

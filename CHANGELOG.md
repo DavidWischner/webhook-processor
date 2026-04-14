@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1] - 2026-04-14
+
+### Fixed
+- Set `Accept: application/vnd.api+json` header if missing — required by Spryker Glue, but not sent by some platforms (e.g. Akeneo)
+- Set `Content-Type: application/vnd.api+json` header during CloudEvents → JSON-API transformation
+
 ## [1.0.0] - 2026-03-04
 
 ### Added
