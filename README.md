@@ -280,10 +280,29 @@ protected function getProcessorPlugins(): array
 }
 ```
 
+## Request logging
+
+Incoming webhook requests can be logged for debugging purposes by setting the environment variable:
+
+```
+WEBHOOK_REQUEST_LOGGING_ENABLED=true
+```
+
+When enabled, every `POST /webhook-processor` request is logged at `INFO` level via Spryker's logger, including:
+
+- Client IP
+- All request headers
+- Raw request body
+
+The logger subscriber runs at priority **1024**, before the CloudEvents transformer (priority 512), so the original raw payload is always logged.
+
 ## Architecture
 
 ```
 POST /webhook-processor
+        ↓
+WebhookProcessorRequestLoggerSubscriber (priority 1024)
+  logs IP, headers, raw body if WEBHOOK_REQUEST_LOGGING_ENABLED=true
         ↓
 WebhookProcessorRequestTransformerSubscriber (priority 512)
   CloudEvents → JSON-API transformation

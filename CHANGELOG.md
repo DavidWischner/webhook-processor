@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.2] - 2026-04-14
+
+### Added
+- `WebhookProcessorRequestLoggerSubscriber` — logs incoming webhook requests (IP, headers, body) when the env variable `WEBHOOK_REQUEST_LOGGING_ENABLED=true` is set; runs at priority 1024 (before the CloudEvents transformer)
+
 ## [1.0.1] - 2026-04-14
 
 ### Fixed

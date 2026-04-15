@@ -13,10 +13,11 @@ use Spryker\Glue\Kernel\AbstractPlugin;
 use Spryker\Service\Container\ContainerInterface;
 use Spryker\Shared\EventDispatcherExtension\Dependency\Plugin\EventDispatcherPluginInterface;
 use Spryker\Shared\EventDispatcher\EventDispatcherInterface;
+use SprykerCommunity\Glue\WebhookProcessor\Plugin\EventSubscriber\WebhookProcessorRequestLoggerSubscriber;
 use SprykerCommunity\Glue\WebhookProcessor\Plugin\EventSubscriber\WebhookProcessorRequestTransformerSubscriber;
 
 /**
- * Registers the WebhookProcessor request transformer subscriber
+ * Registers the WebhookProcessor request transformer and logger subscribers
  */
 class WebhookProcessorEventDispatcherPlugin extends AbstractPlugin implements EventDispatcherPluginInterface
 {
@@ -32,6 +33,7 @@ class WebhookProcessorEventDispatcherPlugin extends AbstractPlugin implements Ev
      */
     public function extend(EventDispatcherInterface $eventDispatcher, ContainerInterface $container): EventDispatcherInterface
     {
+        $eventDispatcher->addSubscriber(new WebhookProcessorRequestLoggerSubscriber());
         $eventDispatcher->addSubscriber(new WebhookProcessorRequestTransformerSubscriber());
 
         return $eventDispatcher;
