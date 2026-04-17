@@ -24,9 +24,27 @@ class WebhookMessageMapper implements WebhookMessageMapperInterface
     public function mapAttributesToWebhookMessage(
         RestWebhookProcessorRequestAttributesTransfer $requestAttributesTransfer,
     ): WebhookMessageTransfer {
+        // CloudEvents requests carry the event payload in `data`; JSON-API requests use `payload`.
+        $payload = $requestAttributesTransfer->getData() ?: $requestAttributesTransfer->getPayload();
+
+        // CloudEvents requests have no `metadata` array — their envelope fields are mapped
+        // to individual transfer properties instead. Collect them explicitly.
+        $metadata = $requestAttributesTransfer->getMetadata();
+        if (!$metadata) {
+            $metadata = array_filter([
+                'id' => $requestAttributesTransfer->getId(),
+                'source' => $requestAttributesTransfer->getSource(),
+                'specversion' => $requestAttributesTransfer->getSpecversion(),
+                'subject' => $requestAttributesTransfer->getSubject(),
+                'time' => $requestAttributesTransfer->getTime(),
+                'datacontenttype' => $requestAttributesTransfer->getDatacontenttype(),
+                'dataschema' => $requestAttributesTransfer->getDataschema(),
+            ]);
+        }
+
         return (new WebhookMessageTransfer())
             ->setType($requestAttributesTransfer->getType())
-            ->setPayload($requestAttributesTransfer->getPayload())
-            ->setMetadata($requestAttributesTransfer->getMetadata());
+            ->setPayload($payload)
+            ->setMetadata($metadata);
     }
 }

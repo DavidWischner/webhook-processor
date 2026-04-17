@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.3] - 2026-04-16
+
+### Fixed
+- `WebhookMessageMapper`: CloudEvents envelope fields (`id`, `source`, `specversion`, `subject`, `time`, `datacontenttype`, `dataschema`) are now correctly collected into `WebhookMessageTransfer::metadata`
+- `WebhookMessageMapper`: payload resolution now falls back to the JSON-API `payload` field when `data` is empty, so both CloudEvents and plain JSON-API requests are handled correctly
+
 ## [1.0.2] - 2026-04-14
 
 ### Added
