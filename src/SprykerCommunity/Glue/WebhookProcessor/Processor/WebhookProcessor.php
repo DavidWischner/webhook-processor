@@ -11,6 +11,8 @@ namespace SprykerCommunity\Glue\WebhookProcessor\Processor;
 
 use Generated\Shared\Transfer\RestWebhookProcessorRequestAttributesTransfer;
 use Generated\Shared\Transfer\WebhookProcessorGatewayRequestTransfer;
+use GuzzleHttp\Exception\ConnectException as GuzzleConnectException;
+use GuzzleHttp\Exception\GuzzleException;
 use Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface;
 use Spryker\Glue\GlueApplication\Rest\Request\Data\RestRequestInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,6 +20,7 @@ use SprykerCommunity\Glue\WebhookProcessor\Dependency\Client\WebhookProcessorToZ
 use SprykerCommunity\Glue\WebhookProcessor\Mapper\WebhookMessageMapperInterface;
 use SprykerCommunity\Glue\WebhookProcessor\RestResponseBuilder\WebhookProcessorRestResponseBuilderInterface;
 use SprykerCommunity\Glue\WebhookProcessor\Validator\WebhookProcessorRequestValidatorInterface;
+use SprykerCommunity\Glue\WebhookProcessor\WebhookProcessorConfig;
 
 class WebhookProcessor implements WebhookProcessorInterface
 {
@@ -31,12 +34,14 @@ class WebhookProcessor implements WebhookProcessorInterface
      * @param \SprykerCommunity\Glue\WebhookProcessor\Validator\WebhookProcessorRequestValidatorInterface $requestValidator
      * @param \SprykerCommunity\Glue\WebhookProcessor\RestResponseBuilder\WebhookProcessorRestResponseBuilderInterface $restResponseBuilder
      * @param \SprykerCommunity\Glue\WebhookProcessor\Dependency\Client\WebhookProcessorToZedRequestClientInterface $zedRequestClient
+     * @param \SprykerCommunity\Glue\WebhookProcessor\WebhookProcessorConfig $config
      */
     public function __construct(
         protected WebhookMessageMapperInterface $webhookMessageMapper,
         protected WebhookProcessorRequestValidatorInterface $requestValidator,
         protected WebhookProcessorRestResponseBuilderInterface $restResponseBuilder,
         protected WebhookProcessorToZedRequestClientInterface $zedRequestClient,
+        protected WebhookProcessorConfig $config,
     ) {
     }
 
@@ -64,11 +69,32 @@ class WebhookProcessor implements WebhookProcessorInterface
         $gatewayRequestTransfer = (new WebhookProcessorGatewayRequestTransfer())
             ->setWebhookMessage($webhookMessageTransfer);
 
-        /** @var \Generated\Shared\Transfer\WebhookProcessorGatewayResponseTransfer $gatewayResponseTransfer */
-        $gatewayResponseTransfer = $this->zedRequestClient->call(
-            static::GATEWAY_URL,
-            $gatewayRequestTransfer,
-        );
+        $requestOptions = [];
+        $timeout = $this->config->getZedRequestTimeout();
+        if ($timeout > 0) {
+            $requestOptions['timeout'] = $timeout;
+        }
+
+        try {
+            /** @var \Generated\Shared\Transfer\WebhookProcessorGatewayResponseTransfer $gatewayResponseTransfer */
+            $gatewayResponseTransfer = $this->zedRequestClient->call(
+                static::GATEWAY_URL,
+                $gatewayRequestTransfer,
+                $requestOptions ?: null,
+            );
+        } catch (GuzzleException $e) {
+            if ($this->isTimeoutException($e)) {
+                return $this->restResponseBuilder->createErrorResponse(
+                    'Gateway timeout',
+                    Response::HTTP_TOO_MANY_REQUESTS,
+                );
+            }
+
+            return $this->restResponseBuilder->createErrorResponse(
+                'Gateway error',
+                Response::HTTP_INTERNAL_SERVER_ERROR,
+            );
+        }
 
         $processorResponseTransfer = $gatewayResponseTransfer->getWebhookProcessorResponse();
 
@@ -80,5 +106,20 @@ class WebhookProcessor implements WebhookProcessorInterface
         }
 
         return $this->restResponseBuilder->createSuccessResponse($processorResponseTransfer);
+    }
+
+    /**
+     * @param \GuzzleHttp\Exception\GuzzleException $e
+     *
+     * @return bool
+     */
+    protected function isTimeoutException(GuzzleException $e): bool
+    {
+        if ($e instanceof GuzzleConnectException) {
+            return true;
+        }
+
+        // cURL error 28 = CURLE_OPERATION_TIMEOUTED (read timeout via Guzzle's timeout option)
+        return $e !== null && str_contains($e->getMessage(), 'cURL error 28');
     }
 }

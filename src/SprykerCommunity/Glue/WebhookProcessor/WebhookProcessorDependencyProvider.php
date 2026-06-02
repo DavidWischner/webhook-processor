@@ -42,7 +42,7 @@ class WebhookProcessorDependencyProvider extends AbstractBundleDependencyProvide
     {
         $container->set(static::CLIENT_ZED_REQUEST, function (Container $container) {
             return new WebhookProcessorToZedRequestClientBridge(
-                $container->getLocator()->zedRequest()->client()
+                $container->getLocator()->zedRequest()->client(),
             );
         });
 

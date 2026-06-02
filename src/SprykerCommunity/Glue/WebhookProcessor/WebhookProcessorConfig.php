@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace SprykerCommunity\Glue\WebhookProcessor;
 
 use Spryker\Glue\Kernel\AbstractBundleConfig;
+use SprykerCommunity\Shared\WebhookProcessor\WebhookProcessorConstants;
 
 class WebhookProcessorConfig extends AbstractBundleConfig
 {
@@ -37,5 +38,13 @@ class WebhookProcessorConfig extends AbstractBundleConfig
     public function getControllerName(): string
     {
         return static::CONTROLLER_NAME;
+    }
+
+    /**
+     * @return int
+     */
+    public function getZedRequestTimeout(): int
+    {
+        return $this->get(WebhookProcessorConstants::WEBHOOK_ZED_TIMEOUT, 0);
     }
 }

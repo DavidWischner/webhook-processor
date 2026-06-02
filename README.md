@@ -280,6 +280,49 @@ protected function getProcessorPlugins(): array
 }
 ```
 
+## Rate limiting / Back-pressure via 429
+
+The module supports responding with `429 Too Many Requests` when the backend-gateway is under heavy load.
+
+### How it works
+
+Every webhook call blocks a Glue worker while it waits for the synchronous ZedRequest to the backend-gateway to complete. If the gateway is overloaded and exceeds the configured timeout, the connection times out and the endpoint returns 429.
+
+### Configuration
+
+In `config_default.php`:
+
+```php
+use SprykerCommunity\Shared\WebhookProcessor\WebhookProcessorConstants;
+
+$config[WebhookProcessorConstants::WEBHOOK_ZED_TIMEOUT] = (int)getenv('WEBHOOK_ZED_TIMEOUT') ?: 0;
+```
+
+Set the env var `WEBHOOK_ZED_TIMEOUT` to the desired timeout in seconds:
+
+| Value | Behaviour |
+|---|---|
+| `0` (default) | No timeout — the call blocks until the gateway responds or the PHP request timeout is reached. 429 is never returned. |
+| `> 0` | If the gateway does not respond within N seconds, the Glue endpoint returns 429. |
+
+A value of `3`–`5` seconds is recommended for production. This should be well above the gateway's normal response time under low load (typically < 500 ms) but short enough to signal back-pressure before sender considers the webhook endpoint unreliable.
+
+### Response on timeout
+
+```json
+{
+    "errors": [
+        {
+            "code": "429",
+            "status": 429,
+            "detail": "Gateway timeout"
+        }
+    ]
+}
+```
+
+Other gateway errors (e.g. SSL issues, invalid responses) result in `500 Internal Server Error` and do **not** trigger a 429.
+
 ## Request logging
 
 Incoming webhook requests can be logged for debugging purposes by setting the environment variable:
@@ -310,7 +353,7 @@ WebhookProcessorRequestTransformerSubscriber (priority 512)
 WebhookProcessorResourceController (Glue)
         ↓
 WebhookProcessor (Glue) — validates, maps to WebhookMessageTransfer
-        ↓
+        ↓  (timeout → 429 if WEBHOOK_ZED_TIMEOUT_SECONDS > 0)
 Zed Gateway — /webhook-processor/gateway/process-webhook
         ↓
 WebhookProcessorFacade::processWebhook()

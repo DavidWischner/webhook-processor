@@ -36,6 +36,7 @@ class WebhookProcessorFactory extends AbstractFactory
             $this->createRequestValidator(),
             $this->createRestResponseBuilder(),
             $this->getZedRequestClient(),
+            $this->getConfig(),
         );
     }
 
