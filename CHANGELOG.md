@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.2.0] - 2026-06-18
+
+### Added
+- Pluggable Glue-side message dispatcher via `WebhookMessageDispatcherPluginInterface` — `WebhookProcessorDependencyProvider::getWebhookMessageDispatcherPlugin()` can be overridden in a project to dispatch messages differently (e.g. to a buffer/queue) instead of forwarding to the Zed gateway
+- `ZedGatewayDispatcherPlugin` — default dispatcher plugin, forwards messages to the Zed backend-gateway (same `429`/`500` behaviour as before)
+- `RedisInboxDispatcherPlugin` + `WebhookRedisBuffer` (Glue) — built-in fire-and-forget dispatcher that pushes webhook messages onto a Redis list ("inbox") and returns `200`/`500` immediately, decoupling the endpoint's response time from backend processing capacity
+- `WebhookInboxWorker` + `WebhookInboxWorkerConsole` (Zed) — new `webhook-processor:inbox-worker:start` console command that drains the Redis inbox and runs each buffered message through the same pre-processor/processor plugin stack as the synchronous gateway flow
+- `WebhookProcessorFacade::runWebhookInboxWorker()`
+- `WebhookProcessorConstants::WEBHOOK_REDIS_INBOX_KEY` and Redis connection config getters (`getRedisHost()`, `getRedisPort()`, `getRedisPassword()`, `getRedisDatabase()`, `getRedisInboxKey()`) on Glue and Zed `WebhookProcessorConfig`, reusing `StorageRedisConstants`
+- Error logging via Spryker's logger: Redis push failures in `RedisInboxDispatcherPlugin` (Glue), and message-decode/routing/connection failures in `WebhookInboxWorker` (Zed) — failures on the async path are no longer silent
+- README documentation for the new dispatcher-plugin extension point, the Redis-inbox dispatcher, and its response-semantics trade-off (always `200 OK`, no delivery feedback to the sender)
+
+### Changed
+- `WebhookProcessor` (Glue) now delegates response building entirely to the configured `WebhookMessageDispatcherPluginInterface` plugin instead of calling the Zed gateway directly
+- `WebhookInboxWorker` drains the Redis inbox via a blocking `BRPOP` instead of polling with `RPOP` + a fixed sleep, removing idle CPU/network overhead and reducing worst-case message pickup latency
+- `WebhookInboxWorker` now reconnects and backs off on a lost Redis connection instead of aborting the run; a single malformed or unroutable buffered message is logged and skipped instead of stopping the rest of the run
+- Glue and Zed Redis connections are now persistent (`pconnect`) instead of reconnecting on every request/worker run
+
+## [1.1.0] - 2026-06-02
+
+### Added
+- Rate limiting / back-pressure via `429 Too Many Requests`: configurable `WEBHOOK_ZED_TIMEOUT` (via `WebhookProcessorConstants::WEBHOOK_ZED_TIMEOUT`) for the synchronous ZedRequest to the backend-gateway; on timeout the endpoint returns `429` instead of blocking indefinitely
+
 ## [1.0.3] - 2026-04-16
 
 ### Fixed

@@ -10,7 +10,12 @@ declare(strict_types=1);
 namespace SprykerCommunity\Glue\WebhookProcessor;
 
 use Spryker\Glue\Kernel\AbstractFactory;
+use SprykerCommunity\Glue\WebhookProcessor\Buffer\WebhookRedisBuffer;
+use SprykerCommunity\Glue\WebhookProcessor\Buffer\WebhookRedisBufferInterface;
 use SprykerCommunity\Glue\WebhookProcessor\Dependency\Client\WebhookProcessorToZedRequestClientInterface;
+use SprykerCommunity\Glue\WebhookProcessor\Dependency\Plugin\WebhookMessageDispatcherPluginInterface;
+use SprykerCommunity\Glue\WebhookProcessor\Dependency\Redis\WebhookProcessorToRedisBridge;
+use SprykerCommunity\Glue\WebhookProcessor\Dependency\Redis\WebhookProcessorToRedisInterface;
 use SprykerCommunity\Glue\WebhookProcessor\Mapper\WebhookMessageMapper;
 use SprykerCommunity\Glue\WebhookProcessor\Mapper\WebhookMessageMapperInterface;
 use SprykerCommunity\Glue\WebhookProcessor\Processor\WebhookProcessor;
@@ -35,8 +40,7 @@ class WebhookProcessorFactory extends AbstractFactory
             $this->createWebhookMessageMapper(),
             $this->createRequestValidator(),
             $this->createRestResponseBuilder(),
-            $this->getZedRequestClient(),
-            $this->getConfig(),
+            $this->getWebhookMessageDispatcherPlugin(),
         );
     }
 
@@ -73,5 +77,37 @@ class WebhookProcessorFactory extends AbstractFactory
     public function getZedRequestClient(): WebhookProcessorToZedRequestClientInterface
     {
         return $this->getProvidedDependency(WebhookProcessorDependencyProvider::CLIENT_ZED_REQUEST);
+    }
+
+    /**
+     * @return \SprykerCommunity\Glue\WebhookProcessor\Dependency\Plugin\WebhookMessageDispatcherPluginInterface
+     */
+    public function getWebhookMessageDispatcherPlugin(): WebhookMessageDispatcherPluginInterface
+    {
+        return $this->getProvidedDependency(WebhookProcessorDependencyProvider::PLUGIN_WEBHOOK_MESSAGE_DISPATCHER);
+    }
+
+    /**
+     * @return \SprykerCommunity\Glue\WebhookProcessor\Buffer\WebhookRedisBufferInterface
+     */
+    public function createWebhookRedisBuffer(): WebhookRedisBufferInterface
+    {
+        return new WebhookRedisBuffer(
+            $this->createRedisClient(),
+            $this->getConfig()->getRedisInboxKey(),
+        );
+    }
+
+    /**
+     * @return \SprykerCommunity\Glue\WebhookProcessor\Dependency\Redis\WebhookProcessorToRedisInterface
+     */
+    public function createRedisClient(): WebhookProcessorToRedisInterface
+    {
+        return new WebhookProcessorToRedisBridge(
+            $this->getConfig()->getRedisHost(),
+            $this->getConfig()->getRedisPort(),
+            $this->getConfig()->getRedisPassword(),
+            $this->getConfig()->getRedisDatabase(),
+        );
     }
 }

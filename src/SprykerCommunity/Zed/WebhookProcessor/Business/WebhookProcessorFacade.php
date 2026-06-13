@@ -66,4 +66,20 @@ class WebhookProcessorFacade extends AbstractFacade implements WebhookProcessorF
             ->createQueueSender()
             ->sendToQueue($webhookMessageTransfer, $queueName);
     }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @api
+     *
+     * @param int $timeLimit
+     *
+     * @return void
+     */
+    public function runWebhookInboxWorker(int $timeLimit): void
+    {
+        $this->getFactory()
+            ->createWebhookInboxWorker()
+            ->run($timeLimit);
+    }
 }

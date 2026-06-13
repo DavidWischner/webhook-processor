@@ -12,6 +12,8 @@ namespace SprykerCommunity\Glue\WebhookProcessor;
 use Spryker\Glue\Kernel\AbstractBundleDependencyProvider;
 use Spryker\Glue\Kernel\Container;
 use SprykerCommunity\Glue\WebhookProcessor\Dependency\Client\WebhookProcessorToZedRequestClientBridge;
+use SprykerCommunity\Glue\WebhookProcessor\Dependency\Plugin\WebhookMessageDispatcherPluginInterface;
+use SprykerCommunity\Glue\WebhookProcessor\Plugin\WebhookMessageDispatcher\ZedGatewayDispatcherPlugin;
 
 class WebhookProcessorDependencyProvider extends AbstractBundleDependencyProvider
 {
@@ -19,6 +21,11 @@ class WebhookProcessorDependencyProvider extends AbstractBundleDependencyProvide
      * @var string
      */
     public const string CLIENT_ZED_REQUEST = 'CLIENT_ZED_REQUEST';
+
+    /**
+     * @var string
+     */
+    public const string PLUGIN_WEBHOOK_MESSAGE_DISPATCHER = 'PLUGIN_WEBHOOK_MESSAGE_DISPATCHER';
 
     /**
      * @param \Spryker\Glue\Kernel\Container $container
@@ -29,6 +36,7 @@ class WebhookProcessorDependencyProvider extends AbstractBundleDependencyProvide
     {
         $container = parent::provideDependencies($container);
         $container = $this->addZedRequestClient($container);
+        $container = $this->addWebhookMessageDispatcherPlugin($container);
 
         return $container;
     }
@@ -47,5 +55,30 @@ class WebhookProcessorDependencyProvider extends AbstractBundleDependencyProvide
         });
 
         return $container;
+    }
+
+    /**
+     * @param \Spryker\Glue\Kernel\Container $container
+     *
+     * @return \Spryker\Glue\Kernel\Container
+     */
+    protected function addWebhookMessageDispatcherPlugin(Container $container): Container
+    {
+        $container->set(static::PLUGIN_WEBHOOK_MESSAGE_DISPATCHER, function (): WebhookMessageDispatcherPluginInterface {
+            return $this->getWebhookMessageDispatcherPlugin();
+        });
+
+        return $container;
+    }
+
+    /**
+     * Overwrite this method in a project to dispatch webhook messages differently
+     * (e.g. to a buffer/queue) instead of forwarding them to the Zed gateway.
+     *
+     * @return \SprykerCommunity\Glue\WebhookProcessor\Dependency\Plugin\WebhookMessageDispatcherPluginInterface
+     */
+    protected function getWebhookMessageDispatcherPlugin(): WebhookMessageDispatcherPluginInterface
+    {
+        return new ZedGatewayDispatcherPlugin();
     }
 }
