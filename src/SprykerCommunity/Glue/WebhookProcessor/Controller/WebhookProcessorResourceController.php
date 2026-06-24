@@ -9,9 +9,12 @@ declare(strict_types=1);
 
 namespace SprykerCommunity\Glue\WebhookProcessor\Controller;
 
-use Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface;
-use Spryker\Glue\GlueApplication\Rest\Request\Data\RestRequestInterface;
-use Spryker\Glue\Kernel\Controller\AbstractController;
+use Generated\Shared\Transfer\GlueErrorTransfer;
+use Generated\Shared\Transfer\GlueRequestTransfer;
+use Generated\Shared\Transfer\GlueResponseTransfer;
+use Generated\Shared\Transfer\WebhookMessageTransfer;
+use Spryker\Glue\Kernel\Backend\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @method \SprykerCommunity\Glue\WebhookProcessor\WebhookProcessorFactory getFactory()
@@ -19,31 +22,101 @@ use Spryker\Glue\Kernel\Controller\AbstractController;
 class WebhookProcessorResourceController extends AbstractController
 {
     /**
-     * @Glue({
-     *     "post": {
-     *          "summary": [
-     *              "Process webhook messages"
-     *          ],
-     *          "parameters": [{
-     *              "ref": "acceptLanguage"
-     *          }],
-     *          "requestAttributesClassName": "Generated\\Shared\\Transfer\\RestWebhookProcessorRequestAttributesTransfer",
-     *          "responseAttributesClassName": "Generated\\Shared\\Transfer\\RestWebhookProcessorResponseAttributesTransfer",
-     *          "responses": {
-     *              "400": "Bad request - No applicable processor found or validation error",
-     *              "500": "Internal server error"
-     *          }
-     *     }
-     * })
+     * @param \Generated\Shared\Transfer\GlueRequestTransfer $glueRequestTransfer
      *
-     * @param \Spryker\Glue\GlueApplication\Rest\Request\Data\RestRequestInterface $restRequest
-     *
-     * @return \Spryker\Glue\GlueApplication\Rest\JsonApi\RestResponseInterface
+     * @return \Generated\Shared\Transfer\GlueResponseTransfer
      */
-    public function postAction(RestRequestInterface $restRequest): RestResponseInterface
+    public function postAction(GlueRequestTransfer $glueRequestTransfer): GlueResponseTransfer
     {
-        return $this->getFactory()
-            ->createWebhookProcessor()
-            ->processWebhook($restRequest);
+        $content = $glueRequestTransfer->getContent();
+
+        if (!$content) {
+            return $this->buildErrorResponse(Response::HTTP_BAD_REQUEST, 'Empty request body');
+        }
+
+        $data = json_decode($content, true);
+
+        if (!is_array($data)) {
+            return $this->buildErrorResponse(Response::HTTP_BAD_REQUEST, 'Invalid JSON body');
+        }
+
+        $webhookMessageTransfer = $this->mapToWebhookMessage($data);
+
+        if (!$webhookMessageTransfer->getType()) {
+            return $this->buildErrorResponse(Response::HTTP_BAD_REQUEST, 'Missing or empty message type');
+        }
+
+        $responseTransfer = $this->getFactory()
+            ->getWebhookProcessorFacade()
+            ->processWebhook($webhookMessageTransfer);
+
+        if (!$responseTransfer->getSuccess()) {
+            return $this->buildErrorResponse(
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $responseTransfer->getMessage() ?? 'No applicable processor found for the webhook message',
+            );
+        }
+
+        return (new GlueResponseTransfer())
+            ->setHttpStatus(Response::HTTP_OK)
+            ->setContent((string)json_encode([
+                'data' => [
+                    'type' => 'webhook-processor',
+                    'id' => null,
+                    'attributes' => [
+                        'success' => true,
+                        'message' => $responseTransfer->getMessage(),
+                        'processedBy' => $responseTransfer->getProcessedBy(),
+                    ],
+                ],
+            ]));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return \Generated\Shared\Transfer\WebhookMessageTransfer
+     */
+    protected function mapToWebhookMessage(array $data): WebhookMessageTransfer
+    {
+        // CloudEvents format (specversion is a required field in the spec)
+        if (isset($data['specversion'])) {
+            return (new WebhookMessageTransfer())
+                ->setType((string)($data['type'] ?? ''))
+                ->setPayload((array)($data['data'] ?? []))
+                ->setMetadata(array_filter([
+                    'id' => $data['id'] ?? null,
+                    'source' => $data['source'] ?? null,
+                    'specversion' => $data['specversion'],
+                    'subject' => $data['subject'] ?? null,
+                    'time' => $data['time'] ?? null,
+                    'datacontenttype' => $data['datacontenttype'] ?? null,
+                    'dataschema' => $data['dataschema'] ?? null,
+                ]));
+        }
+
+        // JSON-API format
+        $attributes = $data['data']['attributes'] ?? [];
+
+        return (new WebhookMessageTransfer())
+            ->setType((string)($attributes['type'] ?? ''))
+            ->setPayload((array)($attributes['payload'] ?? []));
+    }
+
+    /**
+     * @param int $status
+     * @param string $message
+     *
+     * @return \Generated\Shared\Transfer\GlueResponseTransfer
+     */
+    protected function buildErrorResponse(int $status, string $message): GlueResponseTransfer
+    {
+        $glueErrorTransfer = (new GlueErrorTransfer())
+            ->setStatus($status)
+            ->setMessage($message);
+
+        return (new GlueResponseTransfer())
+            ->setHttpStatus($status)
+            ->addError($glueErrorTransfer);
     }
 }

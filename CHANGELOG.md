@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.0] - 2026-06-24
+
+### Added
+- `WebhookProcessorResourcePlugin` (`SprykerCommunity\Glue\WebhookProcessor\Plugin\GlueBackendApiApplication`) — registers `POST /webhook-processor` on Spryker's `GlueBackend` application, which runs with full Zed environment variables and routes messages directly to RabbitMQ via `WebhookProcessorFacade::processWebhook()`, without a synchronous Zed gateway call or Redis buffer
+- `WebhookProcessorResourceController` — parses CloudEvents and JSON-API request bodies, maps to `WebhookMessageTransfer`, calls the Zed facade in-process, returns `GlueResponseTransfer`
+- `WebhookProcessorFactory` + `WebhookProcessorDependencyProvider` — wires `WebhookProcessorFacadeInterface` via the Backend container locator
+
+### Removed
+- Entire Classic-Glue dispatcher stack: `WebhookProcessorResourceRoutePlugin`, `WebhookProcessorEventDispatcherPlugin`, `WebhookProcessorRequestTransformerSubscriber`, `WebhookProcessorRequestLoggerSubscriber`, `WebhookProcessor` (Glue), `WebhookMessageDispatcherPluginInterface`, `ZedGatewayDispatcherPlugin`, `RedisInboxDispatcherPlugin`, `WebhookRedisBuffer`, `WebhookProcessorFactory` (classic), `WebhookProcessorDependencyProvider` (classic), `WebhookProcessorConfig` (Glue), and all Glue-layer Dependency/Mapper/Processor/RestResponseBuilder/Validator classes. The GlueBackend dispatcher (`WebhookProcessorResourcePlugin`) is now the only supported endpoint.
+
 ## [1.2.0] - 2026-06-18
 
 ### Added
