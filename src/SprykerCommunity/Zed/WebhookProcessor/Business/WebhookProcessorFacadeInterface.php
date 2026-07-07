@@ -55,16 +55,4 @@ interface WebhookProcessorFacadeInterface
      */
     public function sendToQueue(WebhookMessageTransfer $webhookMessageTransfer, string $queueName): void;
 
-    /**
-     * Specification:
-     * - Runs the Redis-inbox worker loop for the configured time limit.
-     * - Pops buffered webhook messages from the Redis inbox and routes them to their configured queues.
-     *
-     * @api
-     *
-     * @param int $timeLimit
-     *
-     * @return void
-     */
-    public function runWebhookInboxWorker(int $timeLimit): void;
 }

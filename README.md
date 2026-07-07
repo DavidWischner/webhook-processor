@@ -173,6 +173,74 @@ class GlueBackendApiApplicationDependencyProvider extends SprykerGlueBackendApiA
 }
 ```
 
+### 9. Register the request logger event dispatcher plugin
+
+**`src/Pyz/Glue/EventDispatcher/EventDispatcherDependencyProvider.php`**
+
+```php
+use SprykerCommunity\Glue\WebhookProcessor\Plugin\EventDispatcher\WebhookProcessorBackendEventDispatcherPlugin;
+
+protected function getBackendEventDispatcherPlugins(): array
+{
+    return [
+        // ... existing plugins ...
+        new WebhookProcessorBackendEventDispatcherPlugin(),
+    ];
+}
+```
+
+To enable per-request logging, set the environment variable:
+
+```
+WEBHOOK_REQUEST_LOGGING_ENABLED=true
+```
+
+When enabled, every `POST /webhook-processor` request is logged at `INFO` level, including client IP, all headers, and the raw request body. Requires `LOGGER_LOG_LEVEL=INFO` (or lower) to be visible in the logs.
+
+### 10. Add an `application/json` request builder plugin (project-level)
+
+Spryker's GlueBackend only accepts `application/vnd.api+json` via the `JsonApiConventionPlugin`. Many webhook senders use `Content-Type: application/json` without an `Accept` header, which causes a `415 Unsupported Media Type` before the request reaches the controller.
+
+Add a project-level `RequestBuilderPluginInterface` implementation that sets `acceptedFormat` to `application/json` as a fallback when no convention matched and no `Accept` header was sent:
+
+```php
+use Generated\Shared\Transfer\GlueRequestTransfer;
+use Spryker\Glue\GlueApplicationExtension\Dependency\Plugin\RequestBuilderPluginInterface;
+use Spryker\Glue\Kernel\AbstractPlugin;
+
+class ApplicationJsonFallbackRequestBuilderPlugin extends AbstractPlugin implements RequestBuilderPluginInterface
+{
+    public function build(GlueRequestTransfer $glueRequestTransfer): GlueRequestTransfer
+    {
+        if ($glueRequestTransfer->getAcceptedFormat() !== null) {
+            return $glueRequestTransfer;
+        }
+
+        $contentType = $glueRequestTransfer->getMeta()['content-type'][0] ?? null;
+
+        if ($contentType !== null && str_starts_with($contentType, 'application/json')) {
+            $glueRequestTransfer->setAcceptedFormat('application/json');
+        }
+
+        return $glueRequestTransfer;
+    }
+}
+```
+
+Register it in `getRequestBuilderPlugins()`:
+
+```php
+protected function getRequestBuilderPlugins(): array
+{
+    return array_merge(
+        parent::getRequestBuilderPlugins(),
+        [
+            new ApplicationJsonFallbackRequestBuilderPlugin(),
+        ],
+    );
+}
+```
+
 ## Usage
 
 ### API endpoint

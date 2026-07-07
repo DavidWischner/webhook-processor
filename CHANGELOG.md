@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.1.0] - 2026-07-07
+
+### Added
+- `WebhookProcessorBackendEventDispatcherPlugin` — registers the request logger subscriber with the GlueBackend event dispatcher via `EventDispatcherPluginInterface`; add to `EventDispatcherDependencyProvider::getBackendEventDispatcherPlugins()`
+- `WebhookProcessorRequestLoggerSubscriber` — restored and adapted from the Classic Glue stack for GlueBackend; logs IP, all headers, and the raw request body at `INFO` level on `KernelEvents::REQUEST` (priority 1024, before any request transformers) when `WEBHOOK_REQUEST_LOGGING_ENABLED=true`
+
+### Changed
+- `WebhookProcessor` now logs a `WARNING` including the unhandled message `type` when no processor plugin returns `isApplicable() = true`, to aid diagnosis of 422 responses
+
+### Removed
+- `WebhookInboxWorker` and `WebhookInboxWorkerInterface` — Redis inbox worker (Zed)
+- `WebhookInboxWorkerConsole` — `webhook-processor:inbox-worker:start` console command
+- `GatewayController` — Zed-side backend-gateway controller for the Classic Glue ZedRequest path
+- `WebhookProcessorToRedisBridge` and `WebhookProcessorToRedisInterface` — Redis client dependency
+- `WebhookProcessorConstants` (`WEBHOOK_ZED_TIMEOUT`, `WEBHOOK_REDIS_INBOX_KEY`) — all constants were for the removed Classic Glue / ZedRequest paths
+- Redis connection methods from `WebhookProcessorConfig` (`getRedisHost()`, `getRedisPort()`, `getRedisPassword()`, `getRedisDatabase()`, `getRedisInboxKey()`) and `DEFAULT_REDIS_INBOX_KEY` constant
+- `runWebhookInboxWorker()` from `WebhookProcessorFacade` and `WebhookProcessorFacadeInterface`
+- `createWebhookInboxWorker()` / `createRedisClient()` from `WebhookProcessorBusinessFactory`
+- Transfer types `WebhookProcessorGatewayRequest`, `WebhookProcessorGatewayResponse`, `RestWebhookProcessorRequestAttributes`, `RestWebhookProcessorResponseAttributes` — all used only by the removed Classic Glue / gateway paths
+
 ## [2.0.0] - 2026-06-24
 
 ### Added

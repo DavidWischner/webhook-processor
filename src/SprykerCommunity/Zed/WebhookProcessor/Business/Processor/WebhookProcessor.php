@@ -11,9 +11,11 @@ namespace SprykerCommunity\Zed\WebhookProcessor\Business\Processor;
 
 use Generated\Shared\Transfer\WebhookMessageTransfer;
 use Generated\Shared\Transfer\WebhookProcessorResponseTransfer;
+use Spryker\Shared\Log\LoggerTrait;
 
 class WebhookProcessor implements WebhookProcessorInterface
 {
+    use LoggerTrait;
 /**
      * @param array<\SprykerCommunity\Zed\WebhookProcessor\Dependency\Plugin\WebhookProcessorPluginInterface> $processorPlugins
      * @param array<\SprykerCommunity\Zed\WebhookProcessor\Dependency\Plugin\WebhookPreProcessorPluginInterface> $preProcessorPlugins
@@ -39,7 +41,7 @@ class WebhookProcessor implements WebhookProcessorInterface
             }
         }
 
-        return $this->createNoProcessorFoundResponse();
+        return $this->createNoProcessorFoundResponse($webhookMessageTransfer);
     }
 
     /**
@@ -61,8 +63,12 @@ class WebhookProcessor implements WebhookProcessorInterface
     /**
      * @return \Generated\Shared\Transfer\WebhookProcessorResponseTransfer
      */
-    protected function createNoProcessorFoundResponse(): WebhookProcessorResponseTransfer
+    protected function createNoProcessorFoundResponse(WebhookMessageTransfer $webhookMessageTransfer): WebhookProcessorResponseTransfer
     {
+        $this->getLogger()->warning('No applicable processor found for webhook message type.', [
+            'type' => $webhookMessageTransfer->getType(),
+        ]);
+
         return (new WebhookProcessorResponseTransfer())
             ->setSuccess(false)
             ->setMessage('No applicable processor found for the webhook message');

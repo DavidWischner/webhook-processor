@@ -16,12 +16,8 @@ use SprykerCommunity\Zed\WebhookProcessor\Business\Router\QueueRouter;
 use SprykerCommunity\Zed\WebhookProcessor\Business\Router\QueueRouterInterface;
 use SprykerCommunity\Zed\WebhookProcessor\Business\Sender\QueueSender;
 use SprykerCommunity\Zed\WebhookProcessor\Business\Sender\QueueSenderInterface;
-use SprykerCommunity\Zed\WebhookProcessor\Business\Worker\WebhookInboxWorker;
-use SprykerCommunity\Zed\WebhookProcessor\Business\Worker\WebhookInboxWorkerInterface;
 use SprykerCommunity\Zed\WebhookProcessor\Dependency\Client\WebhookProcessorToQueueClientInterface;
 use SprykerCommunity\Zed\WebhookProcessor\Dependency\Client\WebhookProcessorToStoreClientInterface;
-use SprykerCommunity\Zed\WebhookProcessor\Dependency\Redis\WebhookProcessorToRedisBridge;
-use SprykerCommunity\Zed\WebhookProcessor\Dependency\Redis\WebhookProcessorToRedisInterface;
 use SprykerCommunity\Zed\WebhookProcessor\Dependency\Service\WebhookProcessorToUtilEncodingServiceInterface;
 use SprykerCommunity\Zed\WebhookProcessor\WebhookProcessorDependencyProvider;
 
@@ -103,30 +99,5 @@ class WebhookProcessorBusinessFactory extends AbstractBusinessFactory
     public function getUtilEncodingService(): WebhookProcessorToUtilEncodingServiceInterface
     {
         return $this->getProvidedDependency(WebhookProcessorDependencyProvider::SERVICE_UTIL_ENCODING);
-    }
-
-    /**
-     * @return \SprykerCommunity\Zed\WebhookProcessor\Business\Worker\WebhookInboxWorkerInterface
-     */
-    public function createWebhookInboxWorker(): WebhookInboxWorkerInterface
-    {
-        return new WebhookInboxWorker(
-            $this->createRedisClient(),
-            $this->createWebhookProcessor(),
-            $this->getConfig()->getRedisInboxKey(),
-        );
-    }
-
-    /**
-     * @return \SprykerCommunity\Zed\WebhookProcessor\Dependency\Redis\WebhookProcessorToRedisInterface
-     */
-    public function createRedisClient(): WebhookProcessorToRedisInterface
-    {
-        return new WebhookProcessorToRedisBridge(
-            $this->getConfig()->getRedisHost(),
-            $this->getConfig()->getRedisPort(),
-            $this->getConfig()->getRedisPassword(),
-            $this->getConfig()->getRedisDatabase(),
-        );
     }
 }
