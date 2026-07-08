@@ -173,29 +173,35 @@ class GlueBackendApiApplicationDependencyProvider extends SprykerGlueBackendApiA
 }
 ```
 
-### 9. Register the request logger event dispatcher plugin
+### 9. Register the request logger plugin
 
-**`src/Pyz/Glue/EventDispatcher/EventDispatcherDependencyProvider.php`**
+**`src/Pyz/Glue/GlueBackendApiApplication/GlueBackendApiApplicationDependencyProvider.php`**
 
 ```php
-use SprykerCommunity\Glue\WebhookProcessor\Plugin\EventDispatcher\WebhookProcessorBackendEventDispatcherPlugin;
+use SprykerCommunity\Glue\WebhookProcessor\Plugin\RequestBuilder\WebhookProcessorRequestLoggerPlugin;
 
-protected function getBackendEventDispatcherPlugins(): array
+protected function getRequestBuilderPlugins(): array
 {
     return [
         // ... existing plugins ...
-        new WebhookProcessorBackendEventDispatcherPlugin(),
+        new WebhookProcessorRequestLoggerPlugin(),
     ];
 }
 ```
 
-To enable per-request logging, set the environment variable:
+To enable per-request logging, set the Spryker config key (driven by env variable):
 
-```
-WEBHOOK_REQUEST_LOGGING_ENABLED=true
+**`config/Shared/config_default.php`**
+
+```php
+use SprykerCommunity\Shared\WebhookProcessor\WebhookProcessorConfig as WebhookProcessorSharedConfig;
+
+$config[WebhookProcessorSharedConfig::IS_REQUEST_LOGGING_ENABLED] = (bool)getenv('WEBHOOK_REQUEST_LOGGING_ENABLED');
 ```
 
-When enabled, every `POST /webhook-processor` request is logged at `INFO` level, including client IP, all headers, and the raw request body. Requires `LOGGER_LOG_LEVEL=INFO` (or lower) to be visible in the logs.
+Set `WEBHOOK_REQUEST_LOGGING_ENABLED=true` in the environment (or directly in `config_local.php` for local development).
+
+When enabled, every `POST /webhook-processor` request is logged at `INFO` level, including all headers and the raw request body. Requires `LOGGER_LOG_LEVEL=INFO` (or lower) to be visible in the logs.
 
 ### 10. Add an `application/json` request builder plugin (project-level)
 

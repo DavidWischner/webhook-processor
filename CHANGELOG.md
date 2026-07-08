@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.1] - 2026-07-08
+
+### Added
+- `WebhookProcessorRequestLoggerPlugin` (`Plugin\RequestBuilder`) — logs all `POST /webhook-processor` requests at `INFO` level (headers, raw body) when `IS_REQUEST_LOGGING_ENABLED` is set; add to `GlueBackendApiApplicationDependencyProvider::getRequestBuilderPlugins()`
+- `WebhookProcessorConfig` (`Glue`) — exposes `isRequestLoggingEnabled()` backed by the Spryker config key
+- `WebhookProcessorConfig` (`Shared`) — defines `IS_REQUEST_LOGGING_ENABLED = 'WEBHOOK_PROCESSOR:IS_REQUEST_LOGGING_ENABLED'`; map from env variable `WEBHOOK_REQUEST_LOGGING_ENABLED` in `config_default.php`
+
+### Removed
+- `WebhookProcessorBackendEventDispatcherPlugin` — replaced by `WebhookProcessorRequestLoggerPlugin`; remove from `EventDispatcherDependencyProvider::getBackendEventDispatcherPlugins()`
+- `WebhookProcessorRequestLoggerSubscriber` — replaced by `WebhookProcessorRequestLoggerPlugin`
+
+### Fixed
+- Request logging now actually fires: `GlueBackendApiApplication` implements `RequestFlowAwareApiApplication` and processes requests through its own pipeline (`RequestBuilderPlugin` → validate → resource), bypassing `HttpKernel` entirely. `KernelEvents::REQUEST` is therefore never dispatched for normal webhook requests, so the event subscriber introduced in 2.1.0 was dead code. The `RequestBuilderPlugin` approach hooks directly into this pipeline.
+
 ## [2.1.0] - 2026-07-07
 
 ### Added
